@@ -61,7 +61,7 @@ pom.xml                           - Maven configuration
 
 ### Prerequisites
 
-- Java 11 or higher
+- Java 25
 - Maven 3.6 or higher
 
 ### Installation
