@@ -5,7 +5,6 @@ import com.blackjack.model.GameResult;
 import com.blackjack.model.Hand;
 import com.blackjack.player.HumanPlayer;
 import com.blackjack.player.AlgorithmPlayer;
-import com.blackjack.player.Player;
 import com.blackjack.strategy.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

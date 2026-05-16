@@ -64,13 +64,22 @@ public class GameUI {
         HumanPlayer player = new HumanPlayer(username, scanner);
 
         System.out.println(SEPARATOR);
-        System.out.println("Welcome, "+ username + "! Type 'quit' at the bet prompt to return to the menu");
-        System.out.println(THIN_SEP);
+        System.out.println("Welcome, " + username + "! Starting balance: $" + String.format("%.2f", player.getBalance()));
+        System.out.println("Type 'quit' at any prompt to return to the menu.");
+        System.out.println(SEPARATOR);
 
         while (true) {
+            if (player.getBalance() <= 0) {
+                System.out.println();
+                System.out.println(SEPARATOR);
+                System.out.println("GAME OVER! You're out of money.");
+                System.out.println("Final Balance: $" + String.format("%.2f", player.getBalance()));
+                System.out.println(SEPARATOR);
+                break;
+            }
             System.out.println();
             System.out.println(THIN_SEP);
-            System.out.println("Session stats: " + player.getGameResult());
+            System.out.printf("Balance: $%.2f | %s%n", player.getBalance(), player.getGameResult());
             System.out.println(THIN_SEP);
 
             //Phase 1: bet
@@ -87,6 +96,10 @@ public class GameUI {
                     System.out.printf("Bet must be between %.0f and %.0f.%n", game.getMinBet(), game.getMaxBet());
                     continue;
                 }
+                if (bet > player.getBalance()) {
+                    System.out.printf("Insufficient Balance! You have $%.2f.%n", player.getBalance());
+                    continue;
+                }
             } catch (NumberFormatException e) {
                 System.out.println("Invalid input. Please enter a number.");
                 continue;
@@ -97,7 +110,7 @@ public class GameUI {
         System.out.println();
         System.out.println(SEPARATOR);
         System.out.println("Session summary for " + player.getName());
-        printStats(player.getGameResult());
+        printStats(player.getGameResult(), player.getBalance());
         System.out.println(SEPARATOR);
     }
 
@@ -119,14 +132,17 @@ public class GameUI {
 
         //Player BJ
         if (player.getHand().isBJ()) {
-            System.out.println("\n*** BLACKJACK ***");
+            System.out.println("\n*** BLACKJACK! ***");
             revealDealer();
             if (game.getDealerHand().isBJ()) {
-                System.out.println("\n*** Dealer also got blackjack. PUSH.");
+                System.out.println("Dealer also has blackjack. PUSH.");
                 player.getGameResult().recordHand(GameResult.Outcome.PUSH, bet);
+                player.updateBalance(0);
                 printOutcome(GameResult.Outcome.PUSH, bet);
             } else {
                 player.getGameResult().recordHand(GameResult.Outcome.BLACKJACK, bet);
+                double blackjackWinnings = bet * 1.5;
+                player.updateBalance(blackjackWinnings);
                 printOutcome(GameResult.Outcome.BLACKJACK, bet);
             }
             return;
@@ -185,11 +201,19 @@ public class GameUI {
 
         if (playerBusted) {
             player.getGameResult().recordHand(GameResult.Outcome.LOSS, activeBet);
+            player.updateBalance(-activeBet);
             printOutcome(GameResult.Outcome.LOSS, activeBet);
         } else {
             revealDealer();
             GameResult.Outcome outcome = evaluateOutcome(player.getHand());
             player.getGameResult().recordHand(outcome, activeBet);
+
+            if (outcome == GameResult.Outcome.WIN) {
+                player.updateBalance(activeBet);
+            } else if (outcome == GameResult.Outcome.LOSS) {
+                player.updateBalance(-activeBet);
+            }
+            printOutcome(outcome, activeBet);
         }
     }
 
@@ -226,6 +250,10 @@ public class GameUI {
         long start = System.currentTimeMillis();
         int reportInterval = Math.max(1, hands/10);
         for (int i = 1; i <= hands; i++) {
+            if (bot.getBalance() <= 0) {
+                System.out.printf("  Hand %d/%d - Bot BUSTED! Out of money.%n", i, hands);
+                break;
+            }
             game.playAlgorithmRound(bot);
             if (hands <= 100 || i % reportInterval == 0) {
                 System.out.printf("   Hand %d/%d - %s/%n", i ,hands, bot.getGameResult());
@@ -237,7 +265,7 @@ public class GameUI {
         System.out.println(SEPARATOR);
         System.out.println("Simulation Complete - " + bot.getName());
         System.out.printf("Time Elapsed: %d ms%n", elapsed);
-        printStats(bot.getGameResult());
+        printStats(bot.getGameResult(), bot.getBalance());
         System.out.println(SEPARATOR);
     }
 
@@ -380,15 +408,22 @@ public class GameUI {
         }
     }
 
-    private void printStats(GameResult result) {
-        System.out.printf("Hands played : %d%n",    result.getHandsPlayed());
-        System.out.printf("Wins         : %d%n",    result.getWins());
-        System.out.printf("Losses       : %d%n",    result.getLosses());
-        System.out.printf("Pushes       : %d%n",    result.getPushes());
-        System.out.printf("Blackjacks   : %d%n",    result.getBlackjacks());
-        System.out.printf("Win %%        : %.2f%%%n", result.getWinPercentage());
-        System.out.printf("Net P/L      : %.2f%n",  result.getBalance());
-        System.out.printf("P/L %%        : %.2f%%%n", result.getProfitLossPercentage());
+    private void printStats(GameResult result, double currentBalance) {
+        double startingBalance = 500.0;
+        double profitLoss = currentBalance - startingBalance;
+
+        System.out.printf("Hands played: %d%n",    result.getHandsPlayed());
+        System.out.printf("Wins            : %d%n",    result.getWins());
+        System.out.printf("Losses          : %d%n",    result.getLosses());
+        System.out.printf("Pushes          : %d%n",    result.getPushes());
+        System.out.printf("Blackjacks      : %d%n",    result.getBlackjacks());
+        System.out.printf("Win %%          : %.2f%%%n", result.getWinPercentage());
+        System.out.printf("Starting Balance: $%.2f%n", startingBalance);
+        System.out.printf("Current Balance : $%.2f%n", currentBalance);
+        System.out.printf("Net Profit/Loss : $%.2f%n", profitLoss);
+        if (startingBalance > 0) {
+            System.out.printf("P/L %%          : %.2f%%%n", (profitLoss / startingBalance) * 100);
+        }
     }
 
     private Card dealCard() {

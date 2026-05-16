@@ -52,6 +52,10 @@ public class BlackjackGame {
 
         double bet = player.placeBet(MIN_BET, MAX_BET);
 
+        if (!player.canPlaceBet(bet)) {
+            System.out.println("Cannot place bet - insufficient balance!");
+            return null;
+        }
         //initial d: player gets 2 cards, dealer as well
         player.getHand().addCard(deck.deal());
         dealerHand.addCard(deck.deal());
@@ -63,10 +67,12 @@ public class BlackjackGame {
             if (dealerHand.isBJ()) {
                 GameResult.Outcome outcome = GameResult.Outcome.PUSH;
                 player.getGameResult().recordHand(outcome, bet);
+                updatePlayerBalance(player, outcome, bet);
                 return outcome;
             }
             GameResult.Outcome outcome = GameResult.Outcome.BLACKJACK;
             player.getGameResult().recordHand(outcome, bet);
+            updatePlayerBalance(player, outcome, bet);
             return outcome;
         }
 
@@ -123,6 +129,7 @@ public class BlackjackGame {
         if (playerBusted) {
             GameResult.Outcome outcome = determineOutcome(player.getHand(), dealerHand);
             player.getGameResult().recordHand(outcome, bet);
+            updatePlayerBalance(player, outcome, bet);
             return outcome;
         }
 
@@ -130,7 +137,24 @@ public class BlackjackGame {
 
         GameResult.Outcome outcome = determineOutcome(player.getHand(), dealerHand);
         player.getGameResult().recordHand(outcome,bet);
+        updatePlayerBalance(player, outcome, bet);
         return outcome;
+    }
+
+    private void updatePlayerBalance(Player player, GameResult.Outcome outcome, double bet) {
+        switch (outcome) {
+            case BLACKJACK:
+                player.updateBalance(bet * 1.5);
+                break;
+            case WIN:
+                player.updateBalance(bet);
+                break;
+            case LOSS:
+                player.updateBalance(-bet);
+                break;
+            case PUSH:
+                break;
+        }
     }
 
     /**
@@ -168,6 +192,8 @@ public class BlackjackGame {
         //record both outcomes
         player.getGameResult().recordHand(firstOutcome, bet);
         player.getGameResult().recordHand(secondOutcome, bet);
+        updatePlayerBalance(player, firstOutcome, bet);
+        updatePlayerBalance(player, secondOutcome, bet);
 
         //update players visible hand to the first split hand for display purposes
         player.getHand().clear();

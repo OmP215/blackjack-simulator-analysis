@@ -14,4 +14,10 @@ public interface Player {
     double placeBet(double minBet, double maxBet);
 
     void resetHand();
+
+    //balance interface
+    double getBalance();
+    void setBalance(double amount);
+    void updateBalance(double amount);
+    boolean canPlaceBet(double bet);
 }
